@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>三级联动</title>
+</head>
+<body>
+    <select id="selProvince">
+        <option value="">--请选择省份--</option>
+    </select>
+
+    <select id="selCity">
+        <option value="">--请选择省份--</option>
+    </select>
+
+    <select id="selCounty">
+        <option value="">--请选择省份--</option>
+    </select>
+
+<script type="text/javascript" src="./js/jquery-1.11.1.js"></script>
+<script>
+    /*
+    *  分析：
+    *   1、页面加载的时候请求 省级单位的所有数据
+    *     当省级单位发生变化 去请求对应的市级单位的所有数据
+    *     当市级单位发生变化 去请求对应的区/县级单位的所有数据
+    *     当请求到数据添加到对应的select标签中
+    *    一：请求所有的省级单位的数据
+     *      请求方式 ： GET
+     *      请求地址 ： '/getProvinces'
+     *      请求参数 ： 无
+     *      返回的数据格式 ： json
+     *   二： 请求当前省对应的所有市级单位的数据
+     *      当省级select被选中的option发生变化的时候发送请求
+     *      请求方式 ： GET
+     *      请求地址 ： '/getCities'
+     *      请求参数 ： provinceId
+     *      返回的数据格式： json
+     *   三 ： 请求当前市对应的县/区级的所有数据
+     *   当市级select被选中的option发生变化的时候发送请求
+     *      请求方式：　GET
+     *      请求地址 ： '/getCounties'
+     *      请求参数： cityId
+     *      返回的数据格式： json
+     *
+    * */
+    $(function () {
+        var $selProvince = $('#selProvince')
+        var $selCity = $('#selCity')
+        var $selCounty = $('#selCounty')
+
+        //页面一加载完成，就应该直接发送请求，获取所有的省。
+        $.getJSON('/getProvinces',function (data) {
+            console.log(data)
+            var provinces = data.provinces
+
+            provinces.forEach(function (province,index) {
+                //value给后台，中间的显示给用户看
+                // <option value="">--请选择省份--</option>
+                var html = '<option value="' + province.id + '">'+ province.province +'</option>'
+                $selProvince.append(html)
+            })
+        })
+
+        //change是一个事件！
+        //$selProvince中的option发生改变时，触发
+        $selProvince.change(function () {
+
+            //清除上一次选择，请求的数据。（包括市级和区级）
+            $selCity.children().not(':first').remove();
+            $selCounty.children().not(':first').remove();
+
+            //为了性能优化，当选择第一个option时，不发送请求拿数据
+            if(this.value === ''){
+                return
+            }
+            var provinceId = this.value
+
+
+
+            //需要传递 provinceId参数到服务器
+            $.getJSON('/getCities', {provinceId: provinceId}, function (data) {
+                console.log(data)
+                var cities = data.cities
+
+                cities.forEach(function (city, index) {
+                    //value给后台，中间的显示给用户看
+                    // <option value="">--请选择省份--</option>
+                    var html = '<option value="' + city.id + '">' + city.city + '</option>'
+                    $selCity.append(html)
+                })
+            })
+        })
+
+
+        //和市级逻辑类似
+        $selCity.change(function () {
+
+            //清除上一次选择，请求区级的数据
+            $selCounty.children().not(':first').remove();
+
+            var cityId = this.value
+
+            //需要传递 cityId 参数到服务器
+            $.getJSON('/getCounties', {cityId: cityId}, function (data) {
+                console.log(data)
+                var counties = data.counties
+
+                counties.forEach(function (county, index) {
+                    //value给后台，中间的显示给用户看
+                    // <option value="">--请选择省份--</option>
+                    var html = '<option value="' + county.id + '">' + county.county + '</option>'
+                    $selCounty.append(html)
+                })
+            })
+        })
+    })
+</script>
+</body>
+</html>
